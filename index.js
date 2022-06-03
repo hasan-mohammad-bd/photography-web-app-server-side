@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const stripe = require('stripe')('sk_test_51L0km2DvpcSfFbldPYT2wXWGA7M72AR0yREZTkvczFjy9lKg23Vv610R4GeMKDltYnCDJVodEaFT4EC7bo2b0hcP00bGaspqFb')
 const port = process.env.PORT || 5000;
 
 //middleware
@@ -17,18 +18,40 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 const run = async()=>{
     try{
         await client.connect()
-        const bookingCollection = client.db('photography').collection('service');
+        const serviceCollection = client.db('photography').collection('service');
+        const paymentCollection = client.db('photography').collection('payment');
 
-        app.get('/booking/:id', async(req, res)=> {
+        app.get('/service/:id', async(req, res)=> {
             const id = req.params.id
+            console.log(id);
             const filter = {_id: ObjectId(id)};
-            const service = await bookingCollection.findOne(filter);
+            const service = await serviceCollection.findOne(filter);
             res.send(service);
         })
 
+        app.post('/create-payment-intent', async(req, res) =>{
+            const service = req.body;
+            console.log(service);
+            const price = service.totalPrice;
+            const amount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+              amount : amount,
+              currency: 'usd',
+              payment_method_types:['card']
+            });
+            res.send({clientSecret: paymentIntent.client_secret})
+          });
+
+          app.post('/payment', async(req, res) =>{
+            const payment = req.body;
+      
+            const result = await paymentCollection.insertOne(payment);
+            res.send(result);
+          })
+
     }
     finally {
-        await client.close();
+        
     }
 
 }

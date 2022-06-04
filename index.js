@@ -50,6 +50,13 @@ const run = async()=>{
             res.send(result);
           })
 
+          app.get('/payment/:email', async(req, res) =>{
+            const email = req.params.email 
+            const filter = {email: email}
+            const payment = await paymentCollection.find(filter).toArray();
+            res.send(payment);
+          })
+
     }
     finally {
         
